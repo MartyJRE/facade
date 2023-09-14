@@ -1,38 +1,53 @@
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
+
 use tiny_http::Method;
 use walkdir::WalkDir;
 use yaml_rust::{Yaml, YamlLoader};
-use crate::definition::{Definition, Definitions};
 
-fn parse_definition(yaml: &Yaml) -> Definition {
+use crate::definition::{Definition, Definitions, Endpoint};
+
+fn parse_path(yaml: &Yaml) -> Vec<Definition> {
     let paths = &yaml["paths"];
-    let map = paths.as_hash().unwrap();
-    let mut definition = Definition::default();
+    let map = paths.as_hash().expect("Paths did not exist.");
+
+    let mut definitions = Vec::default();
 
     for (path, path_description) in map.iter() {
-        let path_map = path_description.as_hash().unwrap();
+        let mut definition = Definition::default();
+        let path_map = path_description.as_hash().expect("Path did not exist.");
         for (method, method_description) in path_map.iter() {
-            let parameters = &method_description["parameters"];
-            if let Some(path) = path.as_str() {
+            let mut endpoint = {
                 match method.as_str() {
                     Some("get") => {
-                        definition.add_endpoint(Method::Get, path);
+                        Endpoint::new(Method::Get, path.as_str().expect("Path was not string."))
                     }
                     Some("post") => {
-                        definition.add_endpoint(Method::Post, path);
+                        Endpoint::new(Method::Post, path.as_str().expect("Path was not string."))
                     }
                     Some("patch") => {
-                        definition.add_endpoint(Method::Patch, path);
+                        Endpoint::new(Method::Patch, path.as_str().expect("Path was not string."))
                     }
-                    _ => {}
+                    _ => {
+                        panic!("Unknown method.")
+                    }
                 }
+            };
+            let parameters = &method_description["parameters"].as_vec().expect("Could not parse parameters.");
+            for parameter in parameters.iter() {
+                let name = parameter["name"].as_str().expect("Could not parse parameter name.");
+                let parameter_in = parameter["in"].as_str().expect("Parameter is missing the `in` field.");
+                endpoint.add_parameter(name, parameter_in);
             }
+            let m = endpoint.regex().is_match("/test/emotions");
+            println!("{:?}", m);
+            definition.add_endpoint(endpoint);
         }
+        definitions.push(definition);
     }
 
-    definition
+    definitions
 }
 
 pub fn parse_dir(path: &str) -> Definitions {
@@ -42,12 +57,15 @@ pub fn parse_dir(path: &str) -> Definitions {
         if path.is_dir() {
             continue;
         }
-        eprintln!("INFO: Parsing {}", path.display());
+        println!("INFO: Parsing {}", path.display());
 
         let data = load_file(path);
 
         for item in data {
-            definitions.push(parse_definition(&item));
+            let parsed_paths = parse_path(&item);
+            for parsed_path in parsed_paths {
+                definitions.push(parsed_path)
+            }
         }
     }
 
@@ -55,10 +73,10 @@ pub fn parse_dir(path: &str) -> Definitions {
 }
 
 fn load_file(path: &Path) -> Vec<Yaml> {
-    let mut file = File::open(path).unwrap();
+    let mut file = File::open(path).expect("File could not be opened.");
     let mut contents = String::new();
 
-    file.read_to_string(&mut contents).unwrap();
+    file.read_to_string(&mut contents).expect("File could not be read to string.");
 
-    YamlLoader::load_from_str(&contents).unwrap()
+    YamlLoader::load_from_str(&contents).expect("File could not be parsed as YAML.")
 }

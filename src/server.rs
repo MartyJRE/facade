@@ -1,16 +1,17 @@
 use tiny_http::{Response, Server};
+
 use crate::definition::Definitions;
 
 pub fn serve(address: &str, definitions: &Definitions) {
-    eprintln!("Launching server: {address}");
-    let server = Server::http(address).unwrap();
+    println!("INFO: Launching server: {address}");
+    let server = Server::http(address).expect("Server could not start.");
 
-    eprintln!("{:?}", definitions);
+    println!("INFO: {:?}", definitions);
 
     loop {
         let request = match server.recv() {
             Ok(req) => {
-                eprintln!("INFO: Received a request {} {}", req.method(), req.url());
+                println!("INFO: Received a request {} {}", req.method(), req.url());
                 req
             }
             Err(err) => {
@@ -22,10 +23,10 @@ pub fn serve(address: &str, definitions: &Definitions) {
         let endpoint = definitions.find_endpoint(request.method(), request.url());
         match endpoint {
             Some(endpoint) => {
-                eprintln!("INFO: Matched {:?} {}", endpoint.method, endpoint.path);
+                println!("INFO: Matched {:?} {}", endpoint.method, endpoint.path);
                 match request.respond(Response::from_string("OK").with_status_code(200)) {
                     Ok(_) => {
-                        eprintln!("INFO: Finished request");
+                        println!("INFO: Finished request");
                     }
                     Err(err) => {
                         eprintln!("ERROR: Could not respond {err}");
@@ -38,7 +39,7 @@ pub fn serve(address: &str, definitions: &Definitions) {
                     .respond(Response::from_string("").with_status_code(404))
                 {
                     Ok(_) => {
-                        eprintln!("INFO: Finished request");
+                        println!("INFO: Finished request");
                     }
                     Err(err) => {
                         eprintln!("ERROR: Could not respond {err}");
