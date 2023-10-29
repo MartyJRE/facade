@@ -1,3 +1,3 @@
 # Facade
 
-A facade project in Rust.
+A gateway project in Go.
