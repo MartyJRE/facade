@@ -11,5 +11,5 @@ func main() {
 	if parserErr != nil {
 		log.Fatal(parserErr)
 	}
-	server.Serve(":5000", &definitions)
+	server.Serve(&definitions)
 }

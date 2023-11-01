@@ -35,21 +35,41 @@ type Methods map[string]Method
 
 type Paths map[string]Methods
 
+type ErrorMessageHandling struct {
+	Description string `yaml:"description"`
+}
+
+type ResponseHandler struct {
+	Frontend bool `yaml:"frontend"`
+}
+
+type Operation struct {
+	ErrorMessageHandling ErrorMessageHandling
+	ResponseHandler      ResponseHandler
+}
+
+type Assembly struct {
+	// TODO: try to unpack this into structs
+	Operations []map[string]interface{} `yaml:"execute"`
+}
+
+type IBMConfiguration struct {
+	Assembly Assembly `yaml:"assembly"`
+}
+
 type Definition struct {
-	Info     Info     `yaml:"info"`
-	BasePath string   `yaml:"basePath"`
-	Swagger  string   `yaml:"swagger"`
-	Consumes []string `yaml:"consumes"`
-	Produces []string `yaml:"produces"`
-	Schemes  []string `yaml:"schemes"`
-	Paths    Paths    `yaml:"paths"`
+	Info             Info             `yaml:"info"`
+	BasePath         string           `yaml:"basePath"`
+	Swagger          string           `yaml:"swagger"`
+	Consumes         []string         `yaml:"consumes"`
+	Produces         []string         `yaml:"produces"`
+	Schemes          []string         `yaml:"schemes"`
+	Paths            Paths            `yaml:"paths"`
+	IBMConfiguration IBMConfiguration `yaml:"x-ibm-configuration"`
 }
 
 func (methodMap *Methods) FindMethod(name string) (*Method, error) {
 	for method, methodDescription := range *methodMap {
-		println(strings.ToLower(method))
-		println(strings.ToLower(name))
-		println(strings.ToLower(method) == strings.ToLower(name))
 		if strings.ToLower(method) == strings.ToLower(name) {
 			return &methodDescription, nil
 		}

@@ -1,36 +1,30 @@
 package server
 
 import (
+	"facade/handler"
 	"facade/parser"
-	"io"
 	"log"
 	"net/http"
 )
 
-func Serve(address string, definitions *[]parser.Definition) {
+const (
+	Port = "5000"
+)
+
+func Serve(definitions *[]parser.Definition) {
 	for _, definition := range *definitions {
 		for path, methods := range definition.Paths {
-			http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-
-				log.Println("[INFO] Request received")
-				found, findErr := methodCopy.FindMethod(r.Method)
-				if findErr != nil {
-					_, writeStringErr := io.WriteString(w, "Method not found")
-					if writeStringErr != nil {
-						log.Fatalln("[ERROR] Response not sent")
-					}
-					log.Println("[ERROR] Method not found")
-					return
-				}
-				log.Println("[INFO] Response sent")
-				_, writeStringErr := io.WriteString(w, found.Summary)
-				if writeStringErr != nil {
-					log.Fatalln("[ERROR] Response not sent")
-				}
-			})
+			localDefinition := definition
+			localPath := path
+			localMethods := methods
+			http.HandleFunc(
+				localDefinition.BasePath+localPath,
+				handler.Handle(localDefinition, localPath, localMethods),
+			)
 		}
 	}
-	serverErr := http.ListenAndServe(address, nil)
+	log.Println("[INFO] Server starting on port " + Port)
+	serverErr := http.ListenAndServe(":"+Port, nil)
 	if serverErr != nil {
 		log.Fatal(serverErr)
 	}
